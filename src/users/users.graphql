@@ -1,0 +1,42 @@
+query GetUsers {
+    users {
+        _id
+        email
+    }
+}
+
+query GetUser {
+    user(_id: "6962b5c436951bc9c60a1186") {
+        _id
+        email
+    }
+}
+
+
+mutation CreateUser {
+    createUser(createUserInput: {
+        email: "test@test2.com"
+        password: "123456Ab#"
+    }) {
+        _id
+        email
+    }
+}
+
+mutation UpdateUser {
+    updateUser(updateUserInput: {
+        id: "6962baf8788fb1ad0c0fb6d0"
+        email: "test@test2.com"
+        password: "123456"
+    }) {
+        _id
+        email
+    }
+}
+
+mutation RemoveUser {
+    removeUser(_id: "6962b5c436951bc9c60a1186") {
+        _id
+        email
+    }
+}
