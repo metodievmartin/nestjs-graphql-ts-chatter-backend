@@ -21,6 +21,7 @@ import { UsersModule } from './users/users.module';
       validationSchema: Joi.object({
         PORT: Joi.number().default(8080),
         MONGODB_URI: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
       }),
     }),
     // GraphQL code-first approach: autoSchemaFile generates schema.graphql from decorators

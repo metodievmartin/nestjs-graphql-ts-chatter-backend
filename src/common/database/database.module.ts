@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ModelDefinition, MongooseModule } from '@nestjs/mongoose';
+import { DbMigrationService } from './db-migration.service';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { ModelDefinition, MongooseModule } from '@nestjs/mongoose';
       inject: [ConfigService], // Dependencies to inject into useFactory (order matters)
     }),
   ],
+  providers: [DbMigrationService],
 })
 export class DatabaseModule {
   // Static module pattern: wraps MongooseModule.forFeature for cleaner imports in feature modules
