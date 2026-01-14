@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UsersRepository } from './users.repository';
+import { isErrorWithMessage } from '../common/utils/error.utils';
 
 @Injectable()
 export class UsersService {
@@ -13,10 +14,17 @@ export class UsersService {
   constructor(private readonly usersService: UsersRepository) {}
 
   async create(createUserInput: CreateUserInput) {
-    return this.usersService.create({
-      ...createUserInput,
-      password: await this.hashPassword(createUserInput.password),
-    });
+    try {
+      return await this.usersService.create({
+        ...createUserInput,
+        password: await this.hashPassword(createUserInput.password),
+      });
+    } catch (err) {
+      if (isErrorWithMessage(err) && err.message.includes('E11000')) {
+        throw new UnprocessableEntityException('Email already exists.');
+      }
+      throw err;
+    }
   }
 
   async findAll() {
