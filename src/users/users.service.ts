@@ -1,4 +1,8 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 
@@ -11,11 +15,11 @@ import { isErrorWithMessage } from '../common/utils/error.utils';
 export class UsersService {
   private readonly SALT_ROUNDS = 10;
 
-  constructor(private readonly usersService: UsersRepository) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async create(createUserInput: CreateUserInput) {
     try {
-      return await this.usersService.create({
+      return await this.usersRepository.create({
         ...createUserInput,
         password: await this.hashPassword(createUserInput.password),
       });
@@ -28,11 +32,11 @@ export class UsersService {
   }
 
   async findAll() {
-    return this.usersService.find({});
+    return this.usersRepository.find({});
   }
 
   async findOne(_id: string) {
-    return this.usersService.findOne({ _id: new Types.ObjectId(_id) });
+    return this.usersRepository.findOne({ _id: new Types.ObjectId(_id) });
   }
 
   async update(_id: string, updateUserInput: UpdateUserInput) {
@@ -42,7 +46,7 @@ export class UsersService {
       );
     }
 
-    return this.usersService.findOneAndUpdate(
+    return this.usersRepository.findOneAndUpdate(
       { _id: new Types.ObjectId(_id) },
       {
         $set: {
@@ -53,14 +57,30 @@ export class UsersService {
   }
 
   remove(_id: string) {
-    return this.usersService.findOneAndDelete({ _id: new Types.ObjectId(_id) });
+    return this.usersRepository.findOneAndDelete({
+      _id: new Types.ObjectId(_id),
+    });
+  }
+
+  async verifyUser(email: string, password: string) {
+    const user = await this.usersRepository.findOne({ email });
+    const isPasswordValid = await this.comparePasswords(
+      password,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return user;
   }
 
   private async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
-  private async comparePassword(password: string, passwordHash: string) {
+  private async comparePasswords(password: string, passwordHash: string) {
     return bcrypt.compare(password, passwordHash);
   }
 }

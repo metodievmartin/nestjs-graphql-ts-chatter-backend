@@ -21,5 +21,6 @@ import { User, UserSchema } from './entities/user.entity';
   // Order doesn't matter - NestJS resolves dependency graph automatically
   // No controllers here: GraphQL uses Resolvers instead of REST Controllers
   providers: [UsersResolver, UsersService, UsersRepository],
+  exports: [UsersService],
 })
 export class UsersModule {}

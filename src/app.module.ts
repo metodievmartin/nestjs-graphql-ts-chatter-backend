@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { DatabaseModule } from './common/database/database.module';
 import { UsersModule } from './users/users.module';
 import { GRAPHQL_PATH } from './common/constants';
+import { AuthModule } from './auth/auth.module';
 
 // Root module - entry point for NestJS dependency injection container
 @Module({
@@ -55,6 +56,7 @@ import { GRAPHQL_PATH } from './common/constants';
       },
       inject: [ConfigService],
     }),
+    AuthModule,
   ],
   controllers: [AppController], // REST controllers (GraphQL uses resolvers instead)
   providers: [AppService], // Services injectable within this module
