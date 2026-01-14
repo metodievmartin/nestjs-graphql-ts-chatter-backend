@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 import { API_PREFIX } from './common/constants';
@@ -12,6 +13,7 @@ async function bootstrap() {
   app.setGlobalPrefix(API_PREFIX);
   app.useGlobalPipes(new ValidationPipe());
   app.useLogger(app.get(Logger));
+  app.use(cookieParser());
 
   const configService = app.get(ConfigService);
 
