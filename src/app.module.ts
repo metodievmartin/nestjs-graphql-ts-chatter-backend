@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { AppController } from './app.controller';
 import { DatabaseModule } from './common/database/database.module';
 import { UsersModule } from './users/users.module';
+import { GRAPHQL_PATH } from './common/constants';
 
 // Root module - entry point for NestJS dependency injection container
 @Module({
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: true,
+      path: GRAPHQL_PATH,
     }),
     DatabaseModule,
     UsersModule,
