@@ -1,0 +1,11 @@
+@baseUrl = http://localhost:8080/v1/api
+
+
+### Login and get token
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@test2.com",
+  "password": "123456Ab#"
+}
