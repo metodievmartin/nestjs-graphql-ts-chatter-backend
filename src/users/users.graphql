@@ -12,6 +12,12 @@ query GetUser {
     }
 }
 
+query GetMe {
+    me {
+        _id
+        email
+    }
+}
 
 mutation CreateUser {
     createUser(createUserInput: {
