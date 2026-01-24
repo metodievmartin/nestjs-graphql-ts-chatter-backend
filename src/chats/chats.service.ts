@@ -1,7 +1,9 @@
+import { Types } from 'mongoose';
 import { Injectable } from '@nestjs/common';
+
+import { ChatsRepository } from './chats.repository';
 import { CreateChatInput } from './dto/create-chat.input';
 import { UpdateChatInput } from './dto/update-chat.input';
-import { ChatsRepository } from './chats.repository';
 
 @Injectable()
 export class ChatsService {
@@ -19,8 +21,8 @@ export class ChatsService {
     return this.chatsRepository.find({});
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} chat`;
+  async findOne(_id: string) {
+    return this.chatsRepository.findOne({ _id: new Types.ObjectId(_id) });
   }
 
   update(id: number, updateChatInput: UpdateChatInput) {
