@@ -12,8 +12,7 @@ export abstract class AbstractRepository<T extends AbstractEntity> {
   // Logger scoped to subclass name for easier debugging (e.g., "UsersRepository")
   protected abstract readonly logger: Logger;
 
-  // `protected readonly` = accessible in subclasses, immutable after construction
-  constructor(protected readonly model: Model<T>) {}
+  constructor(public readonly model: Model<T>) {}
 
   async create(document: Omit<T, '_id'>): Promise<T> {
     const createdDocument = new this.model({

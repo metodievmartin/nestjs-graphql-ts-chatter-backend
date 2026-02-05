@@ -1,10 +1,12 @@
 import { forwardRef, Module } from '@nestjs/common';
+
+import { Chat } from './entities/chat.entity';
 import { ChatsService } from './chats.service';
 import { ChatsResolver } from './chats.resolver';
 import { ChatsRepository } from './chats.repository';
-import { DatabaseModule } from '../common/database/database.module';
-import { Chat, ChatSchema } from './entities/chat.entity';
+import { ChatSchema } from './entities/chat.document';
 import { MessagesModule } from './messages/messages.module';
+import { DatabaseModule } from '../common/database/database.module';
 
 @Module({
   imports: [
@@ -12,6 +14,6 @@ import { MessagesModule } from './messages/messages.module';
     forwardRef(() => MessagesModule),
   ],
   providers: [ChatsResolver, ChatsService, ChatsRepository],
-  exports: [ChatsRepository, ChatsService],
+  exports: [ChatsRepository],
 })
 export class ChatsModule {}

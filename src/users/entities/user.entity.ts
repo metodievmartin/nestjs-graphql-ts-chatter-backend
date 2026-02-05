@@ -12,6 +12,10 @@ export class User extends AbstractEntity {
   email: string;
 
   @Prop()
+  @Field()
+  username: string;
+
+  @Prop()
   // No @Field() = password stays in DB but hidden from GraphQL responses
   password: string;
 }
