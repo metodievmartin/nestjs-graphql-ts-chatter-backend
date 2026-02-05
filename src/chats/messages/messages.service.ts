@@ -78,10 +78,7 @@ export class MessagesService {
     ]);
   }
 
-  async messageCreated({ chatId }: MessageCreatedArgs) {
-    await this.chatsRepository.findOne({
-      _id: new Types.ObjectId(chatId),
-    });
+  messageCreated() {
     return this.pubSub.asyncIterableIterator(MESSAGE_CREATED);
   }
 }

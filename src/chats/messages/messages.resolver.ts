@@ -36,12 +36,12 @@ export class MessagesResolver {
       const userId = context.req.user._id;
       const message: Message = payload.messageCreated;
       return (
-        message.chatId === variables.chatId &&
+        variables.chatIds.includes(message.chatId) &&
         userId !== message.user._id.toHexString()
       );
     },
   })
-  messageCreated(@Args() messageCreatedArgs: MessageCreatedArgs) {
-    return this.messagesService.messageCreated(messageCreatedArgs);
+  messageCreated(@Args() _messageCreatedArgs: MessageCreatedArgs) {
+    return this.messagesService.messageCreated();
   }
 }
