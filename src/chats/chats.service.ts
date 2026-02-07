@@ -4,9 +4,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ChatsRepository } from './chats.repository';
 import { CreateChatInput } from './dto/create-chat.input';
 import { UpdateChatInput } from './dto/update-chat.input';
+import { ForwardPaginationArgs } from '../common/dto/pagination-args.dto';
 import { Chat } from './entities/chat.entity';
 import { User } from '../users/entities/user.entity';
 import { MessageDocument } from './messages/entities/message.document';
+import { decodeCursor } from '../common/utils/cursor.util';
 
 // Represents aggregation output during transformation (allows mutation from raw to final shape)
 interface LatestMessageAggregation extends Omit<MessageDocument, 'userId'> {
@@ -18,6 +20,8 @@ interface LatestMessageAggregation extends Omit<MessageDocument, 'userId'> {
 interface ChatAggregation {
   _id: Types.ObjectId;
   name: string;
+  createdAt: Date;
+  sortDate: Date;
   latestMessage?: LatestMessageAggregation;
 }
 
@@ -25,22 +29,85 @@ interface ChatAggregation {
 export class ChatsService {
   constructor(private readonly chatsRepository: ChatsRepository) {}
 
-  async create(createChatInput: CreateChatInput, userId: string) {
-    return this.chatsRepository.create({
+  async create(
+    createChatInput: CreateChatInput,
+    userId: string,
+  ): Promise<Chat> {
+    const chatDocument = await this.chatsRepository.create({
       ...createChatInput,
       userId,
       messages: [],
     });
+    // Mongoose autopopulates createdAt with timestamps: true
+    return chatDocument as unknown as Chat;
   }
 
-  async findMany(prePipelineStages: PipelineStage[] = []): Promise<Chat[]> {
+  async findMany(
+    prePipelineStages: PipelineStage[] = [],
+    paginationArgs: ForwardPaginationArgs,
+  ): Promise<{ chats: Chat[]; hasNextPage: boolean }> {
+    const { first, after } = paginationArgs;
+
+    // Build cursor filter if cursor provided
+    const cursorMatch: PipelineStage[] = [];
+    if (after) {
+      const { d: sortDate, i: id } = decodeCursor(after);
+      // Fetch items OLDER than cursor (sortDate, _id)
+      cursorMatch.push({
+        $match: {
+          $or: [
+            { sortDate: { $lt: new Date(sortDate) } },
+            {
+              sortDate: new Date(sortDate),
+              _id: { $lt: new Types.ObjectId(id) },
+            },
+          ],
+        },
+      });
+    }
+
     const chats = await this.chatsRepository.model.aggregate<ChatAggregation>([
       // Allow callers to inject stages (e.g., $match) before the main pipeline
       ...prePipelineStages,
-      // Extract last message from array (-1 = last element)
-      { $set: { latestMessage: { $arrayElemAt: ['$messages', -1] } } },
+
+      // Compute sortDate: use latestMessage.createdAt or fall back to chat's createdAt
+      {
+        $addFields: {
+          sortDate: {
+            $cond: {
+              if: { $gt: [{ $size: { $ifNull: ['$messages', []] } }, 0] },
+              then: { $arrayElemAt: ['$messages.createdAt', -1] },
+              else: '$createdAt', // Use chat.createdAt, NOT new Date()
+            },
+          },
+        },
+      },
+
+      // Apply cursor filter (items older than cursor)
+      ...cursorMatch,
+
+      // Sort by sortDate desc, then _id desc (for tiebreaker)
+      { $sort: { sortDate: -1, _id: -1 } },
+
+      // Fetch one extra to determine hasNextPage
+      { $limit: first + 1 },
+
+      // Extract latestMessage for response
+      {
+        $addFields: {
+          latestMessage: {
+            $cond: {
+              if: { $gt: [{ $size: { $ifNull: ['$messages', []] } }, 0] },
+              then: { $arrayElemAt: ['$messages', -1] },
+              else: null,
+            },
+          },
+        },
+      },
+
       // Remove full messages array from output (we only need latestMessage)
       { $unset: 'messages' },
+
       // Join with users collection to get user info for latestMessage
       {
         $lookup: {
@@ -52,8 +119,12 @@ export class ChatsService {
       },
     ]);
 
+    // Determine hasNextPage
+    const hasNextPage = chats.length > first;
+    const resultChats = hasNextPage ? chats.slice(0, first) : chats;
+
     // Post-process to match Chat shape
-    chats.forEach((chat) => {
+    resultChats.forEach((chat) => {
       if (!chat.latestMessage?._id) {
         delete chat.latestMessage;
         return;
@@ -64,13 +135,14 @@ export class ChatsService {
       chat.latestMessage.chatId = chat._id.toHexString();
     });
 
-    return chats as unknown as Chat[];
+    return { chats: resultChats as unknown as Chat[], hasNextPage };
   }
 
   async findOne(_id: string) {
-    const chats = await this.findMany([
-      { $match: { _id: new Types.ObjectId(_id) } },
-    ]);
+    const { chats } = await this.findMany(
+      [{ $match: { _id: new Types.ObjectId(_id) } }],
+      { first: 1 },
+    );
 
     if (!chats[0]) {
       throw new NotFoundException(`No chat was found with ID ${_id}`);

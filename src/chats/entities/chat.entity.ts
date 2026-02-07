@@ -10,4 +10,7 @@ export class Chat extends AbstractEntity {
 
   @Field(() => Message, { nullable: true })
   latestMessage?: Message;
+
+  @Field()
+  createdAt: Date;
 }
