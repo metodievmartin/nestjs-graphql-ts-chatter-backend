@@ -3,12 +3,13 @@ import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 
 import { Message } from './entities/message.entity';
 import { MessagesService } from './messages.service';
-import { GetMessagesArgs } from './dto/get-messages.args';
 import { GqlAuthGuard } from '../../auth/guards/gql-auth.guard';
 import { CreateMessageInput } from './dto/create-message.input.file';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { TokenPayload } from '../../auth/types/token-payload.interface';
 import { MessageCreatedArgs } from './dto/message-created.args';
+import { MessageConnection } from './dto/message-connection.dto';
+import { MessageConnectionArgs } from './dto/message-connection.args';
 
 @Resolver()
 export class MessagesResolver {
@@ -24,11 +25,11 @@ export class MessagesResolver {
   }
 
   @UseGuards(GqlAuthGuard)
-  @Query(() => [Message], { name: 'messages' })
+  @Query(() => MessageConnection, { name: 'messages' })
   async getMessages(
-    @Args() getMessageArgs: GetMessagesArgs,
-  ): Promise<Message[]> {
-    return this.messagesService.getMessages(getMessageArgs);
+    @Args() connectionArgs: MessageConnectionArgs,
+  ): Promise<MessageConnection> {
+    return this.messagesService.getMessages(connectionArgs);
   }
 
   @Subscription(() => Message, {
