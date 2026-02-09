@@ -1,20 +1,16 @@
-import Joi from 'joi';
-import { Logger, Module, UnauthorizedException } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { LoggerModule } from 'nestjs-pino';
-import { type Request } from 'express';
 
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
 import { DatabaseModule } from './common/database/database.module';
 import { UsersModule } from './users/users.module';
-import { GRAPHQL_PATH } from './common/constants';
 import { AuthModule } from './auth/auth.module';
 import { ChatsModule } from './chats/chats.module';
 import { PubSubModule } from './common/pubsub/pubsub.module';
-import { AuthService } from './auth/auth.service';
 import { envVarValidationSchema } from './common/config/app.config';
 import { GqlConfigService } from './common/config/gql-config.service';
 import { createLoggerConfig } from './common/config/logger.config.';
