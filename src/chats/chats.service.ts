@@ -7,12 +7,14 @@ import { UpdateChatInput } from './dto/update-chat.input';
 import { ForwardPaginationArgs } from '../common/dto/pagination-args.dto';
 import { Chat } from './entities/chat.entity';
 import { User } from '../users/entities/user.entity';
+import { UserDocument } from '../users/entities/user.document';
 import { MessageDocument } from './messages/entities/message.document';
 import { decodeCursor } from '../common/utils/cursor.util';
+import { UsersService } from '../users/users.service';
 
 // Represents aggregation output during transformation (allows mutation from raw to final shape)
 interface LatestMessageAggregation extends Omit<MessageDocument, 'userId'> {
-  user: User[] | User; // Array from $lookup, becomes single User after transform
+  user: UserDocument[] | User; // Array from $lookup, becomes single User after transform
   userId?: Types.ObjectId; // Deleted during transform
   chatId?: string; // Added during transform
 }
@@ -27,7 +29,10 @@ interface ChatAggregation {
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly chatsRepository: ChatsRepository) {}
+  constructor(
+    private readonly chatsRepository: ChatsRepository,
+    private readonly userService: UsersService,
+  ) {}
 
   async create(
     createChatInput: CreateChatInput,
@@ -130,7 +135,9 @@ export class ChatsService {
         return;
       }
       // Unwrap user from array and transform to Message shape
-      chat.latestMessage.user = (chat.latestMessage.user as User[])[0];
+      chat.latestMessage.user = this.userService.toEntity(
+        (chat.latestMessage.user as UserDocument[])[0],
+      );
       delete chat.latestMessage.userId;
       chat.latestMessage.chatId = chat._id.toHexString();
     });

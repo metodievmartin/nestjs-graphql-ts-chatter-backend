@@ -2,6 +2,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 import { User } from '../../users/entities/user.entity';
 import { GqlContextType, GqlExecutionContext } from '@nestjs/graphql';
+import { UserDocument } from '../../users/entities/user.document';
 
 /**
  * Extracts request.user which Passport populates after successful authentication.
@@ -11,7 +12,9 @@ import { GqlContextType, GqlExecutionContext } from '@nestjs/graphql';
  * For GraphQL: use context.switchToHttp().getRequest() won't work directly.
  * Instead: GqlExecutionContext.create(context).getContext().req.user
  */
-const getCurrentUserByContext = (context: ExecutionContext): User | null => {
+const getCurrentUserByContext = (
+  context: ExecutionContext,
+): UserDocument | null => {
   if (context.getType() === 'http') {
     return context.switchToHttp().getRequest().user;
   }

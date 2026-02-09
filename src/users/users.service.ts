@@ -12,6 +12,8 @@ import { UsersRepository } from './users.repository';
 import { isErrorWithMessage } from '../common/utils/error.utils';
 import { S3Service } from '../common/s3/s3.service';
 import { USERS_BUCKET, USERS_IMAGE_FILE_EXTENSION } from './users.constants';
+import { UserDocument } from './entities/user.document';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -24,10 +26,12 @@ export class UsersService {
 
   async create(createUserInput: CreateUserInput) {
     try {
-      return await this.usersRepository.create({
-        ...createUserInput,
-        password: await this.hashPassword(createUserInput.password),
-      });
+      return this.toEntity(
+        await this.usersRepository.create({
+          ...createUserInput,
+          password: await this.hashPassword(createUserInput.password),
+        }),
+      );
     } catch (err) {
       if (isErrorWithMessage(err) && err.message.includes('E11000')) {
         throw new UnprocessableEntityException('Email already exists.');
@@ -37,11 +41,15 @@ export class UsersService {
   }
 
   async findAll() {
-    return this.usersRepository.find({});
+    return (await this.usersRepository.find({})).map((userDocument) =>
+      this.toEntity(userDocument),
+    );
   }
 
   async findOne(_id: string) {
-    return this.usersRepository.findOne({ _id: new Types.ObjectId(_id) });
+    return this.toEntity(
+      await this.usersRepository.findOne({ _id: new Types.ObjectId(_id) }),
+    );
   }
 
   async update(_id: string, updateUserInput: UpdateUserInput) {
@@ -51,20 +59,24 @@ export class UsersService {
       );
     }
 
-    return this.usersRepository.findOneAndUpdate(
-      { _id: new Types.ObjectId(_id) },
-      {
-        $set: {
-          ...updateUserInput,
+    return this.toEntity(
+      await this.usersRepository.findOneAndUpdate(
+        { _id: new Types.ObjectId(_id) },
+        {
+          $set: {
+            ...updateUserInput,
+          },
         },
-      },
+      ),
     );
   }
 
-  remove(_id: string) {
-    return this.usersRepository.findOneAndDelete({
-      _id: new Types.ObjectId(_id),
-    });
+  async remove(_id: string) {
+    return this.toEntity(
+      await this.usersRepository.findOneAndDelete({
+        _id: new Types.ObjectId(_id),
+      }),
+    );
   }
 
   async verifyUser(email: string, password: string) {
@@ -78,8 +90,9 @@ export class UsersService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return user;
+    return this.toEntity(user);
   }
+
   async uploadImage(file: Buffer, userId: string): Promise<string> {
     const key = this.getUserImageKey(userId);
     await this.s3Service.upload({
@@ -90,6 +103,19 @@ export class UsersService {
 
     return this.s3Service.getObjectUrl(USERS_BUCKET, key);
   }
+
+  toEntity(userDocument: UserDocument): User {
+    return {
+      _id: userDocument._id,
+      email: userDocument.email,
+      username: userDocument.username,
+      imageUrl: this.s3Service.getObjectUrl(
+        USERS_BUCKET,
+        this.getUserImageKey(userDocument._id.toHexString()),
+      ),
+    };
+  }
+
   private getUserImageKey(userId: string) {
     return `${userId}.${USERS_IMAGE_FILE_EXTENSION}`;
   }

@@ -8,7 +8,14 @@ import { CreateMessageInput } from './dto/create-message.input.file';
 import { PUB_SUB } from '../../common/constants/injection-tokens';
 import { MESSAGE_CREATED } from './constants/pubsub-triggers';
 import { MessageDocument } from './entities/message.document';
+import { UserDocument } from '../../users/entities/user.document';
 import { UsersService } from '../../users/users.service';
+
+// Shape returned by aggregation after $lookup/$unwind/$unset/$set
+interface MessageAggregation extends Omit<MessageDocument, 'userId'> {
+  user: UserDocument;
+  chatId: string;
+}
 import {
   MessageConnection,
   MessageEdge,
@@ -112,7 +119,7 @@ export class MessagesService {
     );
 
     const messages =
-      await this.chatsRepository.model.aggregate<Message>(pipeline);
+      await this.chatsRepository.model.aggregate<MessageAggregation>(pipeline);
 
     // Determine hasPreviousPage (are there older messages?)
     const hasPreviousPage = messages.length > last;
@@ -120,13 +127,19 @@ export class MessagesService {
 
     // Reverse to get chronological order (oldest first for display)
     resultMessages.reverse();
-    console.log('messages: ', resultMessages);
 
     // Build edges with cursors
-    const edges: MessageEdge[] = resultMessages.map((message) => ({
-      cursor: encodeCursor(message.createdAt, message._id.toHexString()),
-      node: message,
-    }));
+    const edges: MessageEdge[] = resultMessages.map((message) => {
+      const node: Message = {
+        ...message,
+        user: this.usersService.toEntity(message.user),
+      };
+
+      return {
+        cursor: encodeCursor(message.createdAt, message._id.toHexString()),
+        node,
+      };
+    });
 
     // Build pageInfo
     const pageInfo: MessagePageInfo = {
