@@ -10,12 +10,17 @@ import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UsersRepository } from './users.repository';
 import { isErrorWithMessage } from '../common/utils/error.utils';
+import { S3Service } from '../common/s3/s3.service';
+import { USERS_BUCKET, USERS_IMAGE_FILE_EXTENSION } from './users.constants';
 
 @Injectable()
 export class UsersService {
   private readonly SALT_ROUNDS = 10;
 
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly s3Service: S3Service,
+  ) {}
 
   async create(createUserInput: CreateUserInput) {
     try {
@@ -74,6 +79,19 @@ export class UsersService {
     }
 
     return user;
+  }
+  async uploadImage(file: Buffer, userId: string): Promise<string> {
+    const key = this.getUserImageKey(userId);
+    await this.s3Service.upload({
+      bucket: USERS_BUCKET,
+      key,
+      file,
+    });
+
+    return this.s3Service.getObjectUrl(USERS_BUCKET, key);
+  }
+  private getUserImageKey(userId: string) {
+    return `${userId}.${USERS_IMAGE_FILE_EXTENSION}`;
   }
 
   private async hashPassword(password: string): Promise<string> {
