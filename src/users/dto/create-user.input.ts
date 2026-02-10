@@ -1,5 +1,17 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsEmail, IsNotEmpty, IsStrongPassword } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsStrongPassword,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import {
+  MAX_USERNAME_LENGTH,
+  MIN_USERNAME_LENGTH,
+  USERNAME_PATTERN,
+} from '../users.constants';
 
 // @InputType() = GraphQL input type (for mutations/query args)
 // Different from @ObjectType() which is for output types
@@ -12,6 +24,11 @@ export class CreateUserInput {
 
   @Field()
   @IsNotEmpty()
+  @MinLength(MIN_USERNAME_LENGTH)
+  @MaxLength(MAX_USERNAME_LENGTH)
+  @Matches(USERNAME_PATTERN, {
+    message: 'Username can only contain letters, numbers, and hyphens',
+  })
   username: string;
 
   @Field()
