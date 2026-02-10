@@ -1,16 +1,24 @@
 import { Types } from 'mongoose';
-import { Prop, Schema } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 import { AbstractEntity } from '../../../common/database/abstract.entity';
 
-@Schema()
+@Schema({ timestamps: true })
 export class MessageDocument extends AbstractEntity {
   @Prop()
   content: string;
 
   @Prop()
-  createdAt: Date;
+  chatId: Types.ObjectId;
 
   @Prop()
   userId: Types.ObjectId;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
+
+export const MessageSchema = SchemaFactory.createForClass(MessageDocument);
+
+// Index for cursor-based pagination
+MessageSchema.index({ chatId: 1, createdAt: -1, _id: -1 });

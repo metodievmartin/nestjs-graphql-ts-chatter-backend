@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 
 import { Message } from './entities/message.entity';
-import { ChatsRepository } from '../chats.repository';
+import { MessagesRepository } from './messages.repository';
 import { CreateMessageInput } from './dto/create-message.input.file';
 import { PUB_SUB } from '../../common/constants/injection-tokens';
 import { MESSAGE_CREATED } from './constants/pubsub-triggers';
@@ -12,9 +12,13 @@ import { UserDocument } from '../../users/entities/user.document';
 import { UsersService } from '../../users/users.service';
 
 // Shape returned by aggregation after $lookup/$unwind/$unset/$set
-interface MessageAggregation extends Omit<MessageDocument, 'userId'> {
+interface MessageAggregation extends Omit<
+  MessageDocument,
+  'userId' | 'chatId'
+> {
   user: UserDocument;
   chatId: string;
+  createdAt: Date;
 }
 import {
   MessageConnection,
@@ -27,32 +31,21 @@ import { decodeCursor, encodeCursor } from '../../common/utils/cursor.util';
 @Injectable()
 export class MessagesService {
   constructor(
-    private readonly chatsRepository: ChatsRepository,
+    private readonly messagesRepository: MessagesRepository,
     private readonly usersService: UsersService,
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
   ) {}
 
   async createMessage({ content, chatId }: CreateMessageInput, userId: string) {
-    const messageDocument: MessageDocument = {
+    const messageDocument = await this.messagesRepository.create({
       content,
+      chatId: new Types.ObjectId(chatId),
       userId: new Types.ObjectId(userId),
-      createdAt: new Date(),
-      _id: new Types.ObjectId(),
-    };
-
-    await this.chatsRepository.findOneAndUpdate(
-      {
-        _id: new Types.ObjectId(chatId),
-      },
-      {
-        $push: {
-          messages: messageDocument,
-        },
-      },
-    );
+    });
 
     const message: Message = {
       ...messageDocument,
+      createdAt: messageDocument.createdAt!,
       chatId,
       user: await this.usersService.findOne(userId),
     };
@@ -71,12 +64,8 @@ export class MessagesService {
   }: MessageConnectionArgs): Promise<MessageConnection> {
     // Build the aggregation pipeline
     const pipeline: PipelineStage[] = [
-      // Find the specific chat
-      { $match: { _id: new Types.ObjectId(chatId) } },
-      // Deconstruct messages array into separate documents (one per message)
-      { $unwind: '$messages' },
-      // Promote message fields to root level (discard chat wrapper)
-      { $replaceRoot: { newRoot: '$messages' } },
+      // Find messages for this chat
+      { $match: { chatId: new Types.ObjectId(chatId) } },
       // Sort by createdAt descending (newest first for slicing)
       { $sort: { createdAt: -1, _id: -1 } },
     ];
@@ -107,19 +96,18 @@ export class MessagesService {
           from: 'users',
           localField: 'userId',
           foreignField: '_id',
-          as: 'user', // Result is always an array
+          as: 'user',
         },
       },
-      // Unwrap user from single-element array to object
       { $unwind: '$user' },
-      // Remove userId (replaced by user object above)
       { $unset: 'userId' },
-      // Add chatId to each message for GraphQL response
-      { $set: { chatId } },
+      { $set: { chatId: { $toString: '$chatId' } } },
     );
 
     const messages =
-      await this.chatsRepository.model.aggregate<MessageAggregation>(pipeline);
+      await this.messagesRepository.model.aggregate<MessageAggregation>(
+        pipeline,
+      );
 
     // Determine hasPreviousPage (are there older messages?)
     const hasPreviousPage = messages.length > last;
