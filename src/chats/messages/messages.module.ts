@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 
 import { Message } from './entities/message.entity';
+import { ChatsModule } from '../chats.module';
 import { MessagesService } from './messages.service';
 import { MessagesResolver } from './messages.resolver';
 import { MessagesRepository } from './messages.repository';
@@ -11,6 +12,7 @@ import { DatabaseModule } from '../../common/database/database.module';
 @Module({
   imports: [
     DatabaseModule.forFeature([{ name: Message.name, schema: MessageSchema }]),
+    forwardRef(() => ChatsModule),
     UsersModule,
   ],
   providers: [MessagesResolver, MessagesService, MessagesRepository],

@@ -1,5 +1,5 @@
 import { PipelineStage, Types } from 'mongoose';
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 
 import { Message } from './entities/message.entity';
@@ -10,6 +10,7 @@ import { MESSAGE_CREATED } from './constants/pubsub-triggers';
 import { MessageDocument } from './entities/message.document';
 import { UserDocument } from '../../users/entities/user.document';
 import { UsersService } from '../../users/users.service';
+import { ChatsService } from '../chats.service';
 
 // Shape returned by aggregation after $lookup/$unwind/$unset/$set
 interface MessageAggregation extends Omit<
@@ -33,10 +34,15 @@ export class MessagesService {
   constructor(
     private readonly messagesRepository: MessagesRepository,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => ChatsService))
+    private readonly chatsService: ChatsService,
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
   ) {}
 
   async createMessage({ content, chatId }: CreateMessageInput, userId: string) {
+    // Indexed countDocuments on _id, can be cached with a short TTL if this becomes a bottleneck
+    await this.chatsService.verifyAccess(chatId, userId);
+
     const messageDocument = await this.messagesRepository.create({
       content,
       chatId: new Types.ObjectId(chatId),
@@ -57,11 +63,12 @@ export class MessagesService {
     return message;
   }
 
-  async getMessages({
-    chatId,
-    last,
-    before,
-  }: MessageConnectionArgs): Promise<MessageConnection> {
+  async getMessages(
+    { chatId, last, before }: MessageConnectionArgs,
+    userId: string,
+  ): Promise<MessageConnection> {
+    await this.chatsService.verifyAccess(chatId, userId);
+
     // Build the aggregation pipeline
     const pipeline: PipelineStage[] = [
       // Find messages for this chat

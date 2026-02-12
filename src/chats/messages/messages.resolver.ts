@@ -28,8 +28,9 @@ export class MessagesResolver {
   @Query(() => MessageConnection, { name: 'messages' })
   async getMessages(
     @Args() connectionArgs: MessageConnectionArgs,
+    @CurrentUser() user: TokenPayload,
   ): Promise<MessageConnection> {
-    return this.messagesService.getMessages(connectionArgs);
+    return this.messagesService.getMessages(connectionArgs, user._id);
   }
 
   @Subscription(() => Message, {

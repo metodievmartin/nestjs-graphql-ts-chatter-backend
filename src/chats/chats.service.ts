@@ -42,9 +42,16 @@ export class ChatsService {
     createChatInput: CreateChatInput,
     userId: string,
   ): Promise<Chat> {
+    const userIds = createChatInput.userIds ?? [];
+    if (!userIds.includes(userId)) {
+      userIds.push(userId);
+    }
+
     const chatDocument = await this.chatsRepository.create({
       ...createChatInput,
       userId,
+      userIds,
+      isPrivate: createChatInput.isPrivate ?? false,
     });
     return chatDocument as unknown as Chat;
   }
@@ -178,9 +185,12 @@ export class ChatsService {
     return { chats: resultChats as unknown as Chat[], hasNextPage };
   }
 
-  async findOne(_id: string) {
+  async findOne(_id: string, userId: string) {
     const { chats } = await this.findMany(
-      [{ $match: { _id: new Types.ObjectId(_id) } }],
+      [
+        { $match: { _id: new Types.ObjectId(_id) } },
+        { $match: this.userChatFilter(userId) },
+      ],
       { first: 1 },
     );
 
@@ -189,6 +199,17 @@ export class ChatsService {
     }
 
     return chats[0];
+  }
+
+  async verifyAccess(chatId: string, userId: string): Promise<void> {
+    const count = await this.chatsRepository.model.countDocuments({
+      _id: new Types.ObjectId(chatId),
+      ...this.userChatFilter(userId),
+    });
+
+    if (count === 0) {
+      throw new NotFoundException(`No chat was found with ID ${chatId}`);
+    }
   }
 
   update(id: number, updateChatInput: UpdateChatInput) {

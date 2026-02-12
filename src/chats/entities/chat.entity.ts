@@ -8,6 +8,12 @@ export class Chat extends AbstractEntity {
   @Field()
   name: string;
 
+  @Field()
+  isPrivate: boolean;
+
+  @Field(() => [String])
+  userIds: string[];
+
   @Field(() => Message, { nullable: true })
   latestMessage?: Message;
 

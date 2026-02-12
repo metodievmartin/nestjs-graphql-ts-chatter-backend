@@ -3,11 +3,7 @@ import { ChatsService } from './chats.service';
 import { Chat } from './entities/chat.entity';
 import { CreateChatInput } from './dto/create-chat.input';
 import { UpdateChatInput } from './dto/update-chat.input';
-import {
-  ChatConnection,
-  ChatEdge,
-  PageInfo,
-} from './dto/chat-connection.dto';
+import { ChatConnection, ChatEdge, PageInfo } from './dto/chat-connection.dto';
 import { ForwardPaginationArgs } from '../common/dto/pagination-args.dto';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
@@ -32,9 +28,10 @@ export class ChatsResolver {
   @Query(() => ChatConnection, { name: 'chats' })
   async findAll(
     @Args() paginationArgs: ForwardPaginationArgs,
+    @CurrentUser() user: TokenPayload,
   ): Promise<ChatConnection> {
     const { chats, hasNextPage } = await this.chatsService.findMany(
-      [],
+      [{ $match: this.chatsService.userChatFilter(user._id) }],
       paginationArgs,
     );
 
@@ -54,9 +51,13 @@ export class ChatsResolver {
     return { edges, pageInfo };
   }
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => Chat, { name: 'chat' })
-  findOne(@Args('_id') _id: string): Promise<Chat> {
-    return this.chatsService.findOne(_id);
+  findOne(
+    @Args('_id') _id: string,
+    @CurrentUser() user: TokenPayload,
+  ): Promise<Chat> {
+    return this.chatsService.findOne(_id, user._id);
   }
 
   @Mutation(() => Chat)

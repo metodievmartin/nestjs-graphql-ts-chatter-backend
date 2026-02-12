@@ -16,5 +16,6 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   providers: [ChatsResolver, ChatsService, ChatsRepository],
+  exports: [ChatsService],
 })
 export class ChatsModule {}
