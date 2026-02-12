@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsNotEmpty } from 'class-validator';
+import { IsMongoId, IsNotEmpty } from 'class-validator';
 
 @InputType()
 export class CreateMessageInput {
@@ -9,5 +9,6 @@ export class CreateMessageInput {
 
   @Field()
   @IsNotEmpty()
+  @IsMongoId({ message: 'chatId must be a valid ID' })
   chatId: string;
 }

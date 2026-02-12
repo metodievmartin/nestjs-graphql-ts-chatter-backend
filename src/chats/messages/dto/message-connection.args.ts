@@ -1,5 +1,5 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { IsNotEmpty } from 'class-validator';
+import { IsMongoId, IsNotEmpty } from 'class-validator';
 
 import { BackwardPaginationArgs } from '../../../common/dto/pagination-args.dto';
 
@@ -7,5 +7,6 @@ import { BackwardPaginationArgs } from '../../../common/dto/pagination-args.dto'
 export class MessageConnectionArgs extends BackwardPaginationArgs {
   @Field()
   @IsNotEmpty()
+  @IsMongoId({ message: 'chatId must be a valid ID' })
   chatId: string;
 }
