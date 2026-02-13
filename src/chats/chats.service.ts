@@ -201,7 +201,27 @@ export class ChatsService {
     return chats[0];
   }
 
-  async verifyAccess(chatId: string, userId: string): Promise<void> {
+  async verifyAccessToChatsList(
+    chatIds: string[],
+    userId: string,
+  ): Promise<void> {
+    const objectIds = chatIds.map((id) => new Types.ObjectId(id));
+    const count = await this.chatsRepository.model.countDocuments({
+      _id: { $in: objectIds },
+      ...this.userChatFilter(userId),
+    });
+
+    if (count < chatIds.length) {
+      throw new NotFoundException(
+        'One or more of the specified chats were not found',
+      );
+    }
+  }
+
+  async verifyAccessToSingleChat(
+    chatId: string,
+    userId: string,
+  ): Promise<void> {
     const count = await this.chatsRepository.model.countDocuments({
       _id: new Types.ObjectId(chatId),
       ...this.userChatFilter(userId),

@@ -41,7 +41,7 @@ export class MessagesService {
 
   async createMessage({ content, chatId }: CreateMessageInput, userId: string) {
     // Indexed countDocuments on _id, can be cached with a short TTL if this becomes a bottleneck
-    await this.chatsService.verifyAccess(chatId, userId);
+    await this.chatsService.verifyAccessToSingleChat(chatId, userId);
 
     const messageDocument = await this.messagesRepository.create({
       content,
@@ -67,7 +67,7 @@ export class MessagesService {
     { chatId, last, before }: MessageConnectionArgs,
     userId: string,
   ): Promise<MessageConnection> {
-    await this.chatsService.verifyAccess(chatId, userId);
+    await this.chatsService.verifyAccessToSingleChat(chatId, userId);
 
     // Build the aggregation pipeline
     const pipeline: PipelineStage[] = [
@@ -147,7 +147,8 @@ export class MessagesService {
     return { edges, pageInfo };
   }
 
-  messageCreated() {
+  async messageCreated(chatIds: string[], userId: string) {
+    await this.chatsService.verifyAccessToChatsList(chatIds, userId);
     return this.pubSub.asyncIterableIterator(MESSAGE_CREATED);
   }
 }

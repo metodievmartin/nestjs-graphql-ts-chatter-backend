@@ -1,5 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
+import { GraphQLError } from 'graphql';
 
 import { Message } from './entities/message.entity';
 import { MessagesService } from './messages.service';
@@ -34,16 +35,32 @@ export class MessagesResolver {
   }
 
   @Subscription(() => Message, {
-    filter: (payload, variables: MessageCreatedArgs, context) => {
+    filter: (
+      payload: { messageCreated: Message },
+      variables: MessageCreatedArgs,
+      context: { req: { user: TokenPayload } },
+    ) => {
       const userId = context.req.user._id;
-      const message: Message = payload.messageCreated;
+      const message = payload.messageCreated;
       return (
         variables.chatIds.includes(message.chatId) &&
         userId !== message.user._id.toHexString()
       );
     },
   })
-  messageCreated(@Args() _messageCreatedArgs: MessageCreatedArgs) {
-    return this.messagesService.messageCreated();
+  async messageCreated(
+    @Args() messageCreatedArgs: MessageCreatedArgs,
+    @CurrentUser() user: TokenPayload,
+  ) {
+    try {
+      return await this.messagesService.messageCreated(
+        messageCreatedArgs.chatIds,
+        user._id,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Subscription denied';
+      throw new GraphQLError(message);
+    }
   }
 }
