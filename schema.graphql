@@ -1,0 +1,122 @@
+# This file was generated. Do not edit manually.
+
+schema {
+    query: Query
+    mutation: Mutation
+    subscription: Subscription
+}
+
+"Indicates exactly one field must be supplied and this field must not be `null`."
+directive @oneOf on INPUT_OBJECT
+
+type Chat {
+    _id: ID!
+    createdAt: DateTime!
+    isPrivate: Boolean!
+    latestMessage: Message
+    name: String!
+    userIds: [String!]!
+}
+
+type ChatConnection {
+    edges: [ChatEdge!]!
+    pageInfo: PageInfo!
+}
+
+type ChatEdge {
+    cursor: String!
+    node: Chat!
+}
+
+type Message {
+    _id: ID!
+    chatId: String!
+    content: String!
+    createdAt: DateTime!
+    user: User!
+}
+
+type MessageConnection {
+    edges: [MessageEdge!]!
+    pageInfo: MessagePageInfo!
+}
+
+type MessageEdge {
+    cursor: String!
+    node: Message!
+}
+
+type MessagePageInfo {
+    endCursor: String
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+}
+
+type Mutation {
+    createChat(createChatInput: CreateChatInput!): Chat!
+    createMessage(createMessageInput: CreateMessageInput!): Message!
+    createUser(createUserInput: CreateUserInput!): User!
+    removeChat(id: Int!): Chat!
+    removeUser: User!
+    updateChat(updateChatInput: UpdateChatInput!): Chat!
+    updateUser(updateUserInput: UpdateUserInput!): User!
+}
+
+type PageInfo {
+    endCursor: String
+    hasNextPage: Boolean!
+}
+
+type Query {
+    chat(_id: String!): Chat!
+    chats(after: String, first: Int!): ChatConnection!
+    me: User!
+    messages(before: String, chatId: String!, last: Int!): MessageConnection!
+    user(_id: String!): User!
+    users: [User!]!
+}
+
+type Subscription {
+    messageCreated(chatIds: [String!]!): Message!
+}
+
+type User {
+    _id: ID!
+    email: String!
+    imageUrl: String!
+    username: String!
+}
+
+"A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format."
+scalar DateTime
+
+input CreateChatInput {
+    isPrivate: Boolean! = false
+    name: String!
+    userIds: [String!]
+}
+
+input CreateMessageInput {
+    chatId: String!
+    content: String!
+}
+
+input CreateUserInput {
+    email: String!
+    password: String!
+    username: String!
+}
+
+input UpdateChatInput {
+    id: Int!
+    isPrivate: Boolean = false
+    name: String
+    userIds: [String!]
+}
+
+input UpdateUserInput {
+    email: String
+    password: String
+    username: String
+}
